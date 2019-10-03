@@ -6,8 +6,20 @@
 #include "pitches.h"
 #include "ArduinoUtils.h"
 
-#define BUZZER_PIN 8
 #define WHOLE_NOTE_DURATION_MS 800
+
+// UNCOMMENT ONE AND ONLY ONE BELOW
+#define USE_DEFAULT_TONE
+// #define USE_TONE_AC_LIB
+
+#ifdef USE_DEFAULT_TONE
+#define BUZZER_PIN 8
+#endif
+
+#ifdef USE_TONE_AC_LIB
+#include <toneAC.h>
+// Buzzer must be connected between pins 9 and 10
+#endif
 
 void playMelody(int melody[], int size /* number of notes in the melody */, int notesDurations[] /* 4 for a quarter note, 8 for an eight note, etc.*/)
 {
@@ -20,13 +32,23 @@ void playMelody(int melody[], int size /* number of notes in the melody */, int 
       noteDuration = noteDuration / notesDurations[thisNote];
     }
     ardprintf("note: %d Hz, %d ms", melody[thisNote], noteDuration);
+
+#ifdef USE_DEFAULT_TONE
     tone(BUZZER_PIN, melody[thisNote], noteDuration);
-    // to distinguish the notes, set a minimum time between them.
-    // the note's duration + 30% seems to work well:
+#endif
+#ifdef USE_TONE_AC_LIB
+    toneAC(melody[thisNote], 10, noteDuration, false);
+#endif
+
     int pauseBetweenNotes = noteDuration * 1.30;
     delay(pauseBetweenNotes);
-    // stop the tone playing:
+
+#ifdef USE_DEFAULT_TONE
     noTone(BUZZER_PIN);
+#endif
+#ifdef USE_TONE_AC_LIB
+    noToneAC();
+#endif
   }
 }
 
