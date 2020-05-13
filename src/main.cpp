@@ -1,66 +1,100 @@
 /**
  * Buzzer test with Arduino: notes: melody, etc.
  * 
- * SETUP: plays a melody, plays all notes.
- * LOOP: plays a note. Press +/- and p/m to increase/decrease frequency. Press s to start/stop the noise.
+ * Uses both tone() (from Android) and toneAC (from library) :
+ * - tone() on pin BUZZER_PIN
+ * - toneAC() on pins :
+ *      Pins  9 & 10 - ATmega328, ATmega128, ATmega640, ATmega8, Uno, Leonardo, etc.
+ *      Pins 11 & 12 - ATmega2560/2561, ATmega1280/1281, Mega
+ *      Pins 12 & 13 - ATmega1284P, ATmega644
+ *      Pins 14 & 15 - Teensy 2.0
+ *      Pins 25 & 26 - Teensy++ 2.0
+ * 
+ * Press :
+ * spacebar to pause/resume the sound
+ * a to increase freq
+ * q to decrease freq
+ * z to increase freq by 100
+ * s to decrease freq by 100
+ * e to increase volume
+ * d to decrease volume
+ * 1 to play DC sound
+ * 2 to play a melody
  */
 
 #include <Arduino.h>
+#include <toneAC.h>
 #include "pitches.h"
 #include "main.h"
 #include "ArduinoUtils.h"
 
 #define BUZZER_PIN 8
+// With toneAC, buzzer pins are D9 & D10
+
 #define WHOLE_NOTE_DURATION_MS 600
 
 // Buzzer copntrol
 int freq = 440; // Hz
+int vol = 10;   // Volume for toneAC from 0 to 10
 int pause = false;
 
 void setup()
 {
   Serial.begin(9600);
 
-  // Play buzzer without tone
   pinMode(BUZZER_PIN, OUTPUT);
-  digitalWrite(BUZZER_PIN, HIGH);
-  delay(2 * WHOLE_NOTE_DURATION_MS);
-  digitalWrite(BUZZER_PIN, LOW);
-
-  // Play a melody
-  int melody[] = {
-      NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
-  int notesDurations[] = {
-      4, 8, 8, 4, 4, 4, 4, 4};
-  playMelody(melody, 8, notesDurations);
-
-  // Play all notes
-  // playMelody(ALL_NOTES, ALL_NOTES_COUNT, 0);
 }
 
 void loop()
 {
   int previousFreq = freq;
+  int previousVol = vol;
   if (Serial.available() > 0)
   {
     char receivedChar = Serial.read();
     ardprintf("pressed %c", (char *)receivedChar);
     switch (receivedChar)
     {
-    case '+':
+      
+    case ' ':
+      pause = !pause;
+      ardprintf("pause = %d", pause);
+      break;
+    case 'a':
       freq++;
       break;
-    case '-':
+    case 'q':
       freq--;
       break;
-    case 'p':
+    case 'z':
       freq += 100;
       break;
-    case 'm':
+    case 's':
       freq -= 100;
       break;
-    case 's':
-      pause = !pause;
+    case 'e':
+      if (vol < 10)
+      {
+        vol++;
+      }
+      break;
+    case 'd':
+      if (vol > 0)
+      {
+        vol--;
+      }
+      break;
+    case '1':
+      // Play DC sound
+      playDCsound();
+      break;
+    case '2':
+      // Play a melody
+      int melody[] = {
+          NOTE_C4, NOTE_G3, NOTE_G3, NOTE_A3, NOTE_G3, 0, NOTE_B3, NOTE_C4};
+      int notesDurations[] = {
+          4, 8, 8, 4, 4, 4, 4, 4};
+      playMelody(melody, 8, notesDurations);
       break;
     }
   }
@@ -70,19 +104,26 @@ void loop()
     ardprintf("f = %d Hz", freq);
   }
 
+  if (previousVol != vol)
+  {
+    ardprintf("vol = %d (from 0 to 10)", vol);
+  }
+
   if (pause == true)
   {
     noTone(BUZZER_PIN);
+    noToneAC();
   }
   else
   {
     tone(BUZZER_PIN, freq);
+    toneAC(freq, vol);
   }
 }
 
 void playMelody(int melody[], int size, int notesDurations[])
 {
-  ardprintf("playMelody() with notes: %d ", size);
+  ardprintf("playMelody() with %d notes", size);
   for (int thisNote = 0; thisNote < size; thisNote++)
   {
     int noteDuration = WHOLE_NOTE_DURATION_MS;
@@ -93,10 +134,19 @@ void playMelody(int melody[], int size, int notesDurations[])
     ardprintf("note: %d Hz, %d ms", melody[thisNote], noteDuration);
 
     tone(BUZZER_PIN, melody[thisNote], noteDuration);
+    toneAC(melody[thisNote], vol, noteDuration, true);
 
     int pauseBetweenNotes = noteDuration * 1.30;
     delay(pauseBetweenNotes);
 
     noTone(BUZZER_PIN);
+    noToneAC();
   }
+}
+
+void playDCsound()
+{
+  digitalWrite(BUZZER_PIN, HIGH);
+  delay(1000);
+  digitalWrite(BUZZER_PIN, LOW);
 }
