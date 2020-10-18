@@ -14,7 +14,7 @@
  * spacebar to pause/resume the sound
  * a to increase freq
  * q to decrease freq
- * z to increase freq by 100
+ * z to increase freq by zz100
  * s to decrease freq by 100
  * e to increase volume
  * d to decrease volume
@@ -23,19 +23,17 @@
  */
 
 #include <Arduino.h>
-#include <toneAC.h>
-#include "pitches.h"
 #include "main.h"
+// Only include toneAC for Arduino
+// #include <toneAC.h>
+#include "pitches.h"
 #include "ArduinoUtils.h"
 
-#define BUZZER_PIN 8
-// With toneAC, buzzer pins are D9 & D10
-
-#define WHOLE_NOTE_DURATION_MS 600
-
-// Buzzer copntrol
+// Buzzer control
 int freq = 440; // Hz
-int vol = 10;   // Volume for toneAC from 0 to 10
+#ifdef ARDUINO_NANO
+int vol = 10; // Volume for toneAC from 0 to 10
+#endif
 int pause = false;
 
 void setup()
@@ -48,14 +46,16 @@ void setup()
 void loop()
 {
   int previousFreq = freq;
+#ifdef ARDUINO_NANO
   int previousVol = vol;
+#endif
   if (Serial.available() > 0)
   {
     char receivedChar = Serial.read();
     ardprintf("pressed %c", (char *)receivedChar);
     switch (receivedChar)
     {
-      
+
     case ' ':
       pause = !pause;
       ardprintf("pause = %d", pause);
@@ -72,6 +72,7 @@ void loop()
     case 's':
       freq -= 100;
       break;
+#ifdef ARDUINO_NANO
     case 'e':
       if (vol < 10)
       {
@@ -84,6 +85,7 @@ void loop()
         vol--;
       }
       break;
+#endif
     case '1':
       // Play DC sound
       playDCsound();
@@ -104,20 +106,26 @@ void loop()
     ardprintf("f = %d Hz", freq);
   }
 
+#ifdef ARDUINO_NANO
   if (previousVol != vol)
   {
     ardprintf("vol = %d (from 0 to 10)", vol);
   }
+#endif
 
   if (pause == true)
   {
     noTone(BUZZER_PIN);
+#ifdef ARDUINO_NANO
     noToneAC();
+#endif
   }
   else
   {
     tone(BUZZER_PIN, freq);
+#ifdef ARDUINO_NANO
     toneAC(freq, vol);
+#endif
   }
 }
 
@@ -134,13 +142,17 @@ void playMelody(int melody[], int size, int notesDurations[])
     ardprintf("note: %d Hz, %d ms", melody[thisNote], noteDuration);
 
     tone(BUZZER_PIN, melody[thisNote], noteDuration);
+#ifdef ARDUINO_NANO
     toneAC(melody[thisNote], vol, noteDuration, true);
+#endif
 
     int pauseBetweenNotes = noteDuration * 1.30;
     delay(pauseBetweenNotes);
 
     noTone(BUZZER_PIN);
+#ifdef ARDUINO_NANO
     noToneAC();
+#endif
   }
 }
 
